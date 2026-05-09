@@ -302,11 +302,6 @@ async function init() {
   });
   calcTax();
 
-  // Service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
-
   // Offline indicator
   const offlineBar = document.getElementById('offline-bar');
   window.addEventListener('online', () => offlineBar.classList.remove('show'));
@@ -314,4 +309,13 @@ async function init() {
   if (!navigator.onLine) offlineBar.classList.add('show');
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Auth overlay calls window.App.init() after login + company selection
+window.App = { init };
+
+// DOMContentLoaded: only wire up auth — init() is triggered by auth.js
+document.addEventListener('DOMContentLoaded', () => {
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+});

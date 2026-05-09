@@ -48,7 +48,10 @@ const AuthUI = (() => {
       }
 
       if (profile.companies.length === 1) {
-        Auth.selectCompany(profile.companies[0].id);
+        const co = profile.companies[0];
+        localStorage.setItem('mohaseb_company_name', co.name);
+        Auth.selectCompany(co.id);
+        setTopbarCompany(co.name);
         hide();
         window.App?.init?.();
       } else {
@@ -91,9 +94,9 @@ const AuthUI = (() => {
     const container = document.getElementById('company-picker-list');
     if (!container) return;
     container.innerHTML = companies.map(c => `
-      <button class="company-picker-item" onclick="AuthUI._selectCompany('${c.id}')">
+      <button class="company-picker-item" onclick="AuthUI._selectCompany('${c.id}','${c.name.replace(/'/g,"\\'")}')">
         <strong>${c.name}</strong>
-        <span class="badge">${c.role}</span>
+        <span class="badge badge-blue">${c.role}</span>
       </button>
     `).join('');
     document.getElementById('auth-login-form')?.classList.add('hidden');
@@ -101,19 +104,31 @@ const AuthUI = (() => {
     document.getElementById('company-picker')?.classList.remove('hidden');
   }
 
-  function _selectCompany(id) {
+  function _selectCompany(id, name) {
     Auth.selectCompany(id);
+    if (name) localStorage.setItem('mohaseb_company_name', name);
+    setTopbarCompany(name || id);
     hide();
     window.App?.init?.();
+  }
+
+  function setTopbarCompany(name) {
+    const el = document.getElementById('topbar-company');
+    if (el && name) el.textContent = name;
   }
 
   async function init() {
     if (!Auth.isLoggedIn()) { show(); return; }
 
-    // Validate token by fetching profile
+    // Validate token + get company name
     try {
-      await Auth.fetchProfile();
+      const profile = await Auth.fetchProfile();
+      const storedId = localStorage.getItem('mohaseb_company_id');
+      const company  = profile?.companies?.find(c => c.id === storedId);
+      const name     = company?.name || localStorage.getItem('mohaseb_company_name') || '';
+      setTopbarCompany(name);
       hide();
+      window.App?.init?.();       // ← was missing: app never loaded on page refresh
     } catch {
       Auth.logout();
     }

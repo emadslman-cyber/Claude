@@ -118,7 +118,9 @@
     <button class="hamburger" id="hamburger-btn">☰</button>
     <span class="topbar-title" id="topbar-title">لوحة التحكم</span>
     <div class="topbar-actions">
+      <span id="topbar-company" style="font-size:.8rem;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button class="btn btn-primary btn-sm" onclick="Invoices.openNew()">+ فاتورة جديدة</button>
+      <button class="btn btn-ghost btn-sm" id="logout-btn" title="تسجيل الخروج">🚪</button>
     </div>
   </header>
 
@@ -367,7 +369,7 @@
         <div id="eta-status-bar" style="background:var(--warning-light);border:1.5px solid var(--warning);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <div>
             <div style="font-weight:700;color:var(--warning);font-size:.92rem">⚠️ البروكسي غير متصل</div>
-            <div style="font-size:.8rem;color:var(--gray-600);margin-top:3px">شغّل: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">npm install &amp;&amp; node eta-proxy.js</code></div>
+            <div style="font-size:.8rem;color:var(--gray-600);margin-top:3px">شغّل: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">npm run dev</code></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span id="eta-test-status"></span>
@@ -457,7 +459,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>عنوان البروكسي</label>
-              <input type="text" id="eta-proxy-url" value="http://localhost:3030" placeholder="http://localhost:3030">
+              <input type="text" id="eta-proxy-url" value="http://localhost:3001" placeholder="http://localhost:3001">
             </div>
             <div class="form-group">
               <label>كلمة مرور الشهادة (eta-cert.pfx)</label>
@@ -467,8 +469,8 @@
           <div style="background:var(--primary-light);border-radius:8px;padding:12px;font-size:.83rem;color:var(--primary);line-height:1.8">
             <strong>📋 خطوات التشغيل:</strong><br>
             1. <code>cd</code> إلى مجلد المشروع<br>
-            2. <code>npm install</code><br>
-            3. <code>node eta-proxy.js</code><br>
+            2. <code>cd backend &amp;&amp; pnpm install</code><br>
+            3. <code>npm run dev</code> (من جذر المشروع)<br>
             4. ضع شهادتك الرقمية باسم <code>eta-cert.pfx</code> في نفس المجلد (اختياري للبيئة الحقيقية)
           </div>
         </div>
@@ -813,7 +815,7 @@
 
       <div style="font-size:.85rem;color:var(--gray-500);margin-bottom:12px;line-height:1.7">
         سيتم إرسال الفاتورة إلى هيئة الضرائب المصرية (ETA) بصيغة الفاتورة الإلكترونية.<br>
-        تأكد من تشغيل <code style="background:var(--gray-100);padding:1px 5px;border-radius:3px">eta-proxy.js</code> أولاً.
+        تأكد من تشغيل الخادم: <code style="background:var(--gray-100);padding:1px 5px;border-radius:3px">npm run dev</code>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">

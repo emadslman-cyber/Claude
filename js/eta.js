@@ -63,7 +63,7 @@ const ETA = (() => {
   async function getToken(cfg) {
     if (_accessToken && Date.now() < _tokenExpiry) return _accessToken;
 
-    const proxyBase = cfg.proxyUrl || 'http://localhost:3030';
+    const proxyBase = cfg.proxyUrl || 'http://localhost:3001';
     const res = await fetch(`${proxyBase}/eta/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -223,7 +223,7 @@ const ETA = (() => {
     const doc = buildDocument(inv, cfg);
     const serialized = serializeDocument(doc);
 
-    const proxyBase = cfg.proxyUrl || 'http://localhost:3030';
+    const proxyBase = cfg.proxyUrl || 'http://localhost:3001';
 
     const res = await fetch(`${proxyBase}/eta/submit`, {
       method: 'POST',
@@ -246,7 +246,7 @@ const ETA = (() => {
   // ── Check submission status ───────────────────────────────────────────────
   async function checkStatus(submissionId) {
     const cfg = await loadConfig();
-    const proxyBase = cfg.proxyUrl || 'http://localhost:3030';
+    const proxyBase = cfg.proxyUrl || 'http://localhost:3001';
 
     const res = await fetch(`${proxyBase}/eta/status/${submissionId}`, {
       method: 'POST',
@@ -297,7 +297,7 @@ const ETA = (() => {
       taxRegNumber: cfg.taxReg       || '',
       activityCode: cfg.activityCode || '4711',
       environment:  cfg.environment  || 'preprod',
-      proxyUrl:     cfg.proxyUrl     || 'http://localhost:3030',
+      proxyUrl:     cfg.proxyUrl     || 'http://localhost:3001',
       bizName:      cfg.bizName      || window._settings?.bizName || '',
       branchId:     cfg.branch       || '0',
       governate:    cfg.govornate    || 'القاهرة',
@@ -391,11 +391,11 @@ const ETA = (() => {
         throw new Error('أدخل Client ID و Client Secret أولاً');
       }
 
-      const proxyBase = cfg.proxyUrl || 'http://localhost:3030';
+      const proxyBase = cfg.proxyUrl || 'http://localhost:3001';
 
       // First check if proxy is running
       const pingRes = await fetch(`${proxyBase}/ping`, { signal: AbortSignal.timeout(3000) });
-      if (!pingRes.ok) throw new Error('البروكسي غير متاح — شغّل eta-proxy.js أولاً');
+      if (!pingRes.ok) throw new Error('الخادم غير متاح — شغّل: npm run dev');
 
       // Try token
       const tokenRes = await fetch(`${proxyBase}/eta/token`, {
@@ -465,9 +465,8 @@ const ETA = (() => {
         const uuid = accepted[0]?.uuid || '';
         const longId = accepted[0]?.longId || '';
 
-        // Save ETA submission info to invoice
-        const updated = { ...inv, etaUUID: uuid, etaLongId: longId, etaStatus: 'Valid', etaSubmittedAt: new Date().toISOString() };
-        await DB.put('invoices', updated);
+        // Save ETA submission info via dedicated PATCH endpoint
+        await DB.updateEtaStatus(inv.id, uuid, 'Valid');
         await Invoices.load();
 
         resultEl.innerHTML = `
@@ -494,7 +493,7 @@ const ETA = (() => {
           <div style="color:var(--danger);font-weight:700">❌ خطأ في الإرسال</div>
           <div style="font-size:.85rem;margin-top:6px">${err.message}</div>
           <div style="font-size:.8rem;margin-top:8px;color:var(--gray-500)">
-            تأكد من تشغيل البروكسي: <code>node eta-proxy.js</code>
+            تأكد من تشغيل الخادم: <code>npm run dev</code>
           </div>
         </div>`;
       toast(err.message, 'error');
