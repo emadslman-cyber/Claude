@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; where.exe node 2>$null; ls \"C:\\\\Program Files\\\\nodejs\\\\\" 2>$null; ls \"$env:APPDATA\\\\npm\\\\\" 2>$null)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\\" -Directory | Select-Object Name | Where-Object {$_.Name -match \"node|npm\"})"
+    ]
+  }
+}

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="description" content="برنامج محاسبة للشركات الصغيرة في مصر">
+  <meta name="theme-color" content="#1a56db">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <title>محاسب - برنامج المحل</title>
+</head>
+<body>
+
+<!-- Auth Overlay -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>محاسب</h1>
+      <span>برنامج الشركات الصغيرة</span>
+    </div>
+    <div class="auth-tabs">
+      <button id="auth-login-tab" class="auth-tab active" data-label="تسجيل الدخول">تسجيل الدخول</button>
+      <button id="auth-register-tab" class="auth-tab" data-label="حساب جديد">حساب جديد</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="auth-login-form" autocomplete="on">
+      <div class="auth-error" id="auth-login-error" style="display:none"></div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input id="login-password" type="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button id="login-btn" type="submit" class="btn btn-primary btn-block" data-label="دخول">دخول</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="auth-register-form" class="hidden" autocomplete="off">
+      <div class="auth-error" id="auth-register-error" style="display:none"></div>
+      <div class="form-group">
+        <label>اسم الشركة / المحل</label>
+        <input id="reg-company" type="text" placeholder="مثال: متجر الأمانة" required>
+      </div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input id="reg-email" type="email" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور (8 أحرف على الأقل)</label>
+        <input id="reg-password" type="password" placeholder="••••••••" required minlength="8" autocomplete="new-password">
+      </div>
+      <button id="register-btn" type="submit" class="btn btn-primary btn-block" data-label="إنشاء الحساب">إنشاء الحساب</button>
+    </form>
+
+    <!-- Company Picker (shown when user has multiple companies) -->
+    <div id="company-picker" class="hidden">
+      <p style="text-align:center;margin-bottom:1rem;color:var(--gray-600)">اختر الشركة</p>
+      <div id="company-picker-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- App Wrapper (hidden until logged in) -->
+<div id="app-wrapper" class="hidden">
+
+<!-- Offline Bar -->
+<div id="offline-bar">⚡ أنت غير متصل بالإنترنت — البيانات محفوظة محلياً</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>محاسب</h1>
+    <span>برنامج المحل</span>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item" data-nav="dashboard">
+      <span class="icon">🏠</span> لوحة التحكم
+    </button>
+    <button class="nav-item" data-nav="invoices">
+      <span class="icon">🧾</span> الفواتير
+    </button>
+    <button class="nav-item" data-nav="customers">
+      <span class="icon">👥</span> العملاء
+    </button>
+    <button class="nav-item" data-nav="expenses">
+      <span class="icon">💸</span> المصروفات
+    </button>
+    <button class="nav-item" data-nav="reports">
+      <span class="icon">📊</span> التقارير
+    </button>
+    <button class="nav-item" data-nav="tax">
+      <span class="icon">🧮</span> حاسبة الضريبة
+    </button>
+    <button class="nav-item" data-nav="backup">
+      <span class="icon">☁️</span> النسخ الاحتياطي
+    </button>
+    <button class="nav-item" data-nav="eta">
+      <span class="icon">🏛️</span> هيئة الضرائب (ETA)
+    </button>
+    <button class="nav-item" data-nav="settings">
+      <span class="icon">⚙️</span> الإعدادات
+    </button>
+  </nav>
+  <div class="sidebar-footer">نسخة 1.0 • مصر 🇪🇬</div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <header class="topbar">
+    <button class="hamburger" id="hamburger-btn">☰</button>
+    <span class="topbar-title" id="topbar-title">لوحة التحكم</span>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" onclick="Invoices.openNew()">+ فاتورة جديدة</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="section" id="sec-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">مبيعات الشهر</div>
+          <div class="stat-value" id="dash-sales">0 ج.م</div>
+          <div class="stat-sub">الشهر الحالي</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">مصروفات الشهر</div>
+          <div class="stat-value" id="dash-expenses">0 ج.م</div>
+          <div class="stat-sub">الشهر الحالي</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">صافي الربح</div>
+          <div class="stat-value" id="dash-profit">0 ج.م</div>
+          <div class="stat-sub">الشهر الحالي</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">فواتير معلقة</div>
+          <div class="stat-value" id="dash-pending">0</div>
+          <div class="stat-sub" id="dash-pending-amt">0 ج.م</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-title">🧾 آخر الفواتير</div>
+          <ul class="recent-list" id="dash-recent-invoices">
+            <li class="recent-item" style="justify-content:center;color:var(--gray-500)">لا فواتير بعد</li>
+          </ul>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="navigate('invoices')">عرض الكل ←</button>
+        </div>
+        <div class="card">
+          <div class="card-title">💸 آخر المصروفات</div>
+          <ul class="recent-list" id="dash-recent-expenses">
+            <li class="recent-item" style="justify-content:center;color:var(--gray-500)">لا مصروفات بعد</li>
+          </ul>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="navigate('expenses')">عرض الكل ←</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INVOICES ===== -->
+    <section class="section" id="sec-invoices">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:1rem;font-weight:700">قائمة الفواتير</h2>
+          <button class="btn btn-primary" onclick="Invoices.openNew()">+ فاتورة جديدة</button>
+        </div>
+        <div class="search-bar">
+          <div class="search-input">
+            <input type="text" id="inv-search" placeholder="بحث بالرقم أو اسم العميل...">
+          </div>
+          <select id="inv-status-filter" style="width:auto;min-width:130px">
+            <option value="all">جميع الحالات</option>
+            <option value="paid">مدفوعة</option>
+            <option value="pending">معلقة</option>
+            <option value="cancelled">ملغية</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>رقم الفاتورة</th>
+                <th>العميل</th>
+                <th>التاريخ</th>
+                <th>الإجمالي</th>
+                <th>الحالة</th>
+                <th>ETA</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="inv-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CUSTOMERS ===== -->
+    <section class="section" id="sec-customers">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:1rem;font-weight:700">قائمة العملاء</h2>
+          <button class="btn btn-primary" onclick="Customers.openAdd()">+ عميل جديد</button>
+        </div>
+        <div class="search-bar">
+          <div class="search-input">
+            <input type="text" id="cust-search" placeholder="بحث بالاسم أو رقم الهاتف...">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>الهاتف</th>
+                <th>البريد الإلكتروني</th>
+                <th>العنوان</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="cust-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== EXPENSES ===== -->
+    <section class="section" id="sec-expenses">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:1rem;font-weight:700">المصروفات</h2>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:.9rem;color:var(--gray-500)">الإجمالي: <strong id="exp-total-shown" style="color:var(--danger)">0 ج.م</strong></span>
+            <button class="btn btn-primary" onclick="Expenses.openAdd()">+ مصروف جديد</button>
+          </div>
+        </div>
+        <div class="search-bar">
+          <div class="search-input">
+            <input type="text" id="exp-search" placeholder="بحث في المصروفات...">
+          </div>
+          <select id="exp-cat-filter" style="width:auto;min-width:150px">
+            <option value="all">جميع الفئات</option>
+            <option>إيجار</option>
+            <option>رواتب</option>
+            <option>كهرباء وماء</option>
+            <option>مواد خام</option>
+            <option>شحن وتوصيل</option>
+            <option>تسويق وإعلان</option>
+            <option>صيانة</option>
+            <option>ضرائب ورسوم</option>
+            <option>أدوات مكتبية</option>
+            <option>أخرى</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>الوصف</th>
+                <th>الفئة</th>
+                <th>المبلغ</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="exp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REPORTS ===== -->
+    <section class="section" id="sec-reports">
+      <div class="tabs">
+        <button class="tab-btn rep-tab active" data-period="daily">يومي</button>
+        <button class="tab-btn rep-tab" data-period="weekly">أسبوعي</button>
+        <button class="tab-btn rep-tab" data-period="monthly">شهري</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">إجمالي المبيعات</div>
+          <div class="stat-value" id="rep-sales">0 ج.م</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">إجمالي المصروفات</div>
+          <div class="stat-value" id="rep-expenses">0 ج.م</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">صافي الربح</div>
+          <div class="stat-value" id="rep-profit">0 ج.م</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">عدد الفواتير / مدفوعة</div>
+          <div class="stat-value" id="rep-invoices">0</div>
+          <div class="stat-sub">مدفوعة: <span id="rep-paid">0</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 الرسم البياني</div>
+        <div id="rep-chart"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-title">🏆 أفضل العملاء</div>
+          <ul class="recent-list" id="rep-top-customers"></ul>
+        </div>
+        <div class="card">
+          <div class="card-title">📂 المصروفات حسب الفئة</div>
+          <ul class="recent-list" id="rep-expenses-breakdown"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAX CALCULATOR ===== -->
+    <section class="section" id="sec-tax">
+      <div style="max-width:500px">
+        <div class="tax-card">
+          <h2 style="font-size:1.1rem;margin-bottom:16px">🧮 حاسبة ضريبة القيمة المضافة</h2>
+          <div class="form-group">
+            <label style="color:rgba(255,255,255,.85)">المبلغ قبل الضريبة</label>
+            <input type="number" id="tax-amount" placeholder="0" min="0" step="any" style="font-size:1.1rem;font-weight:700">
+          </div>
+          <div class="form-group">
+            <label style="color:rgba(255,255,255,.85)">نسبة الضريبة %</label>
+            <input type="number" id="tax-pct" value="14" min="0" max="100" step="0.1">
+          </div>
+          <div class="tax-result">
+            <div class="tax-result-row"><span>المبلغ الأساسي</span><span id="tax-result-base">0 ج.م</span></div>
+            <div class="tax-result-row"><span>نسبة الضريبة</span><span id="tax-result-pct">14%</span></div>
+            <div class="tax-result-row"><span>قيمة الضريبة</span><span id="tax-result-tax">0 ج.م</span></div>
+            <div class="tax-result-row total"><span>الإجمالي مع الضريبة</span><span id="tax-result-total">0 ج.م</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 معدلات الضريبة الشائعة في مصر</div>
+          <table>
+            <thead><tr><th>النوع</th><th>النسبة</th><th>تطبيق</th></tr></thead>
+            <tbody>
+              <tr><td>ضريبة القيمة المضافة (VAT)</td><td><strong>14%</strong></td><td><button class="btn btn-sm btn-outline" onclick="document.getElementById('tax-pct').value=14;calcTax()">تطبيق</button></td></tr>
+              <tr><td>السلع الغذائية الأساسية</td><td><strong>0%</strong></td><td><button class="btn btn-sm btn-outline" onclick="document.getElementById('tax-pct').value=0;calcTax()">تطبيق</button></td></tr>
+              <tr><td>بعض السلع المختارة</td><td><strong>5%</strong></td><td><button class="btn btn-sm btn-outline" onclick="document.getElementById('tax-pct').value=5;calcTax()">تطبيق</button></td></tr>
+              <tr><td>الخدمات المهنية</td><td><strong>14%</strong></td><td><button class="btn btn-sm btn-outline" onclick="document.getElementById('tax-pct').value=14;calcTax()">تطبيق</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ETA ===== -->
+    <section class="section" id="sec-eta">
+      <div style="max-width:720px">
+
+        <!-- Connection Status Bar -->
+        <div id="eta-status-bar" style="background:var(--warning-light);border:1.5px solid var(--warning);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-weight:700;color:var(--warning);font-size:.92rem">⚠️ البروكسي غير متصل</div>
+            <div style="font-size:.8rem;color:var(--gray-600);margin-top:3px">شغّل: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">npm install &amp;&amp; node eta-proxy.js</code></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="eta-test-status"></span>
+            <button class="btn btn-sm btn-outline" id="eta-test-btn" onclick="ETA.testConnection()">🔌 اختبار الاتصال</button>
+          </div>
+        </div>
+
+        <!-- Credentials -->
+        <div class="card">
+          <div class="card-title">🔑 بيانات الاتصال بـ ETA</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client ID</label>
+              <input type="text" id="eta-client-id" placeholder="من بوابة ETA">
+            </div>
+            <div class="form-group">
+              <label>Client Secret</label>
+              <input type="password" id="eta-client-secret" placeholder="من بوابة ETA">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الرقم الضريبي للشركة <span style="color:red">*</span></label>
+              <input type="text" id="eta-tax-reg" placeholder="مثال: 123456789">
+            </div>
+            <div class="form-group">
+              <label>كود النشاط (ISIC4)</label>
+              <select id="eta-activity-code">
+                <option value="4711">4711 — تجزئة متاجر عامة</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>البيئة</label>
+              <select id="eta-environment">
+                <option value="preprod">Preprod — للاختبار</option>
+                <option value="production">Production — الحقيقي</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>رقم الفرع</label>
+              <input type="text" id="eta-branch" value="0" placeholder="0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Address (for ETA) -->
+        <div class="card">
+          <div class="card-title">🏢 عنوان الشركة (مطلوب لـ ETA)</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المحافظة</label>
+              <select id="eta-governate">
+                <option>القاهرة</option><option>الجيزة</option><option>الإسكندرية</option>
+                <option>المنصورة</option><option>الإسماعيلية</option><option>السويس</option>
+                <option>بورسعيد</option><option>أسيوط</option><option>أسوان</option>
+                <option>الأقصر</option><option>سوهاج</option><option>قنا</option>
+                <option>المنيا</option><option>بني سويف</option><option>الفيوم</option>
+                <option>أخرى</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>المدينة / المنطقة</label>
+              <input type="text" id="eta-city" placeholder="مثال: مدينة نصر">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>الشارع</label>
+              <input type="text" id="eta-street" placeholder="اسم الشارع">
+            </div>
+            <div class="form-group">
+              <label>رقم المبنى</label>
+              <input type="text" id="eta-building" placeholder="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الرمز البريدي (اختياري)</label>
+            <input type="text" id="eta-postal" placeholder="11111">
+          </div>
+        </div>
+
+        <!-- Proxy + Certificate -->
+        <div class="card">
+          <div class="card-title">⚙️ إعدادات البروكسي والشهادة الرقمية</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>عنوان البروكسي</label>
+              <input type="text" id="eta-proxy-url" value="http://localhost:3030" placeholder="http://localhost:3030">
+            </div>
+            <div class="form-group">
+              <label>كلمة مرور الشهادة (eta-cert.pfx)</label>
+              <input type="password" id="eta-cert-password" placeholder="اختياري">
+            </div>
+          </div>
+          <div style="background:var(--primary-light);border-radius:8px;padding:12px;font-size:.83rem;color:var(--primary);line-height:1.8">
+            <strong>📋 خطوات التشغيل:</strong><br>
+            1. <code>cd</code> إلى مجلد المشروع<br>
+            2. <code>npm install</code><br>
+            3. <code>node eta-proxy.js</code><br>
+            4. ضع شهادتك الرقمية باسم <code>eta-cert.pfx</code> في نفس المجلد (اختياري للبيئة الحقيقية)
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="ETA.saveConfig()">💾 حفظ الإعدادات</button>
+          <button class="btn btn-outline" id="eta-test-btn2" onclick="ETA.testConnection()">🔌 اختبار الاتصال</button>
+        </div>
+
+        <!-- ETA Submitted Invoices -->
+        <div class="card" style="margin-top:20px">
+          <div class="card-title">📋 الفواتير المرسلة لـ ETA</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقم الفاتورة</th>
+                  <th>ETA UUID</th>
+                  <th>تاريخ الإرسال</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="eta-submitted-tbody">
+                <tr><td colspan="4" style="text-align:center;color:var(--gray-500);padding:20px">لا توجد فواتير مرسلة بعد</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ETA Info -->
+        <div class="card">
+          <div class="card-title">ℹ️ معلومات عن الفاتورة الإلكترونية في مصر</div>
+          <div style="font-size:.87rem;color:var(--gray-600);line-height:2.2">
+            <div>🏛️ <strong>الجهة:</strong> هيئة الضرائب المصرية (ETA)</div>
+            <div>🌐 <strong>البوابة:</strong> invoicing.eta.gov.eg</div>
+            <div>📑 <strong>نوع المستند:</strong> I (فاتورة) — C (إشعار دائن) — D (إشعار مدين)</div>
+            <div>📊 <strong>ضريبة VAT:</strong> T1 — 14% على معظم السلع والخدمات</div>
+            <div>🔐 <strong>التوقيع الرقمي:</strong> مطلوب — USB Token أو HSM من مزودين معتمدين</div>
+            <div>📦 <strong>مزودو التوقيع:</strong> Egypt Trust / Misr for Central Clearing / ITIDA</div>
+            <div>📞 <strong>دعم ETA:</strong> 16395</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== BACKUP ===== -->
+    <section class="section" id="sec-backup">
+      <div style="max-width:600px">
+        <div class="card">
+          <div class="card-title">☁️ النسخ الاحتياطي والاستعادة</div>
+          <p style="font-size:.9rem;color:var(--gray-500);margin-bottom:20px">
+            احتفظ بنسخة من بياناتك لحمايتها من الفقدان. يمكنك تحميل ملف النسخة ورفعه على Google Drive أو WhatsApp أو البريد الإلكتروني.
+          </p>
+
+          <div style="display:grid;gap:16px">
+            <div style="border:2px solid var(--success);border-radius:10px;padding:18px">
+              <h3 style="color:var(--success);font-size:.95rem;margin-bottom:8px">⬇️ تحميل نسخة احتياطية</h3>
+              <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:12px">تحميل جميع البيانات (فواتير، عملاء، مصروفات) كملف JSON</p>
+              <button class="btn btn-success" onclick="Backup.exportData()">⬇️ تحميل النسخة الاحتياطية</button>
+            </div>
+
+            <div style="border:2px solid var(--primary);border-radius:10px;padding:18px">
+              <h3 style="color:var(--primary);font-size:.95rem;margin-bottom:8px">⬆️ استعادة من نسخة احتياطية</h3>
+              <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:12px">استيراد ملف نسخة سابقة لاستعادة البيانات</p>
+              <button class="btn btn-outline" onclick="Backup.importData()">⬆️ استيراد نسخة احتياطية</button>
+            </div>
+
+            <div style="background:var(--gray-50);border-radius:10px;padding:16px">
+              <div style="font-size:.85rem;color:var(--gray-500)">آخر نسخة احتياطية:</div>
+              <div style="font-weight:700;color:var(--gray-700);margin-top:4px" id="last-backup-date">لم يتم النسخ بعد</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">💡 نصائح للنسخ الاحتياطي</div>
+          <ul style="font-size:.88rem;color:var(--gray-600);padding-right:16px;line-height:2">
+            <li>خذ نسخة أسبوعية على الأقل</li>
+            <li>احفظ الملف على Google Drive أو Dropbox</li>
+            <li>أرسل الملف لنفسك على WhatsApp أو Gmail</li>
+            <li>احتفظ بنسخة على فلاشة USB</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section class="section" id="sec-settings">
+      <div style="max-width:600px">
+        <div class="card">
+          <div class="card-title">🏢 بيانات الشركة / المحل</div>
+          <div class="form-group">
+            <label>اسم الشركة / المحل</label>
+            <input type="text" id="set-bizName" placeholder="مثال: محل أحمد للملابس">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم الهاتف</label>
+              <input type="tel" id="set-bizPhone" placeholder="01xxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>الرقم الضريبي</label>
+              <input type="text" id="set-bizTaxId" placeholder="اختياري">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>العنوان</label>
+            <input type="text" id="set-bizAddress" placeholder="العنوان الكامل">
+          </div>
+          <div class="form-group">
+            <label>نسبة الضريبة الافتراضية %</label>
+            <input type="number" id="set-defaultTax" value="14" min="0" max="100">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">ℹ️ معلومات التطبيق</div>
+          <div style="font-size:.88rem;color:var(--gray-600);line-height:2">
+            <div>🇪🇬 مصمم خصيصاً للسوق المصري</div>
+            <div>💾 البيانات محفوظة على جهازك (لا إنترنت مطلوب)</div>
+            <div>📱 يعمل على الموبايل والكمبيوتر</div>
+            <div>🔒 بياناتك خاصة — لا ترسل لأي خادم</div>
+            <div>📲 يمكن تثبيته كتطبيق على الموبايل (PWA)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Invoice Modal -->
+<div class="modal-overlay" id="inv-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="inv-modal-title">فاتورة جديدة</h2>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close('inv-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="inv-form" onsubmit="event.preventDefault(); Invoices.save()">
+        <input type="hidden" id="inv-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label>العميل</label>
+            <select id="inv-customer" class="customer-select">
+              <option value="">-- اختر العميل --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="inv-date" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الحالة</label>
+            <select id="inv-status">
+              <option value="pending">معلقة</option>
+              <option value="paid">مدفوعة</option>
+              <option value="cancelled">ملغية</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>نسبة الضريبة %</label>
+            <input type="number" id="inv-tax-pct" value="14" min="0" max="100" oninput="Invoices.calcTotals()">
+          </div>
+        </div>
+
+        <!-- Items -->
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <label style="margin:0">المنتجات / الخدمات</label>
+            <button type="button" class="btn btn-sm btn-outline" onclick="Invoices.addItem()">+ إضافة سطر</button>
+          </div>
+          <div class="inv-items-header">
+            <span>المنتج</span><span>الكمية</span><span>السعر</span><span>الإجمالي</span><span></span>
+          </div>
+          <div id="inv-items"></div>
+        </div>
+
+        <!-- Totals -->
+        <div style="background:var(--gray-50);border-radius:8px;padding:14px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.9rem">
+            <span>المجموع الفرعي</span><span id="inv-subtotal">0 ج.م</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;gap:10px">
+            <span style="font-size:.9rem">خصم</span>
+            <input type="number" id="inv-discount" value="0" min="0" step="any" style="width:100px;text-align:left" oninput="Invoices.calcTotals()">
+            <span id="inv-discount-show" style="font-size:.9rem;min-width:70px;text-align:left">0 ج.م</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.9rem">
+            <span>الضريبة</span><span id="inv-tax-amt">0 ج.م</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0 4px;font-size:1.05rem;font-weight:700;border-top:2px solid var(--gray-200);margin-top:6px">
+            <span>الإجمالي</span><span id="inv-total" style="color:var(--primary)">0 ج.م</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <textarea id="inv-notes" placeholder="ملاحظات إضافية..." rows="2"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close('inv-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="Invoices.save()">💾 حفظ الفاتورة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice View Modal -->
+<div class="modal-overlay" id="invoice-view-modal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header no-print">
+      <h2>عرض الفاتورة</h2>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close('invoice-view-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="invoice-print-area"></div>
+    <div class="modal-footer no-print">
+      <button class="btn btn-ghost" onclick="Modal.close('invoice-view-modal')">إغلاق</button>
+      <button class="btn btn-outline" onclick="Invoices.printInvoice()">🖨️ طباعة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" id="cust-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="cust-modal-title">إضافة عميل</h2>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close('cust-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="cust-form" onsubmit="event.preventDefault(); Customers.save()">
+        <input type="hidden" id="cust-id">
+        <div class="form-group">
+          <label>الاسم <span style="color:red">*</span></label>
+          <input type="text" id="cust-name" placeholder="اسم العميل" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>رقم الهاتف</label>
+            <input type="tel" id="cust-phone" placeholder="01xxxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="cust-email" placeholder="example@email.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>العنوان</label>
+          <input type="text" id="cust-address" placeholder="عنوان العميل">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الرقم الضريبي للعميل <span style="font-size:.75rem;color:var(--gray-500)">(للفواتير B2B)</span></label>
+            <input type="text" id="cust-tax-reg" placeholder="اختياري">
+          </div>
+          <div class="form-group">
+            <label>المحافظة</label>
+            <input type="text" id="cust-governate" placeholder="القاهرة">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <textarea id="cust-notes" rows="2" placeholder="ملاحظات..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close('cust-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="Customers.save()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div class="modal-overlay" id="exp-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="exp-modal-title">إضافة مصروف</h2>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close('exp-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="exp-form" onsubmit="event.preventDefault(); Expenses.save()">
+        <input type="hidden" id="exp-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label>التاريخ</label>
+            <input type="date" id="exp-date" required>
+          </div>
+          <div class="form-group">
+            <label>الفئة</label>
+            <select id="exp-category" class="expense-category-select"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>الوصف <span style="color:red">*</span></label>
+          <input type="text" id="exp-description" placeholder="وصف المصروف" required>
+        </div>
+        <div class="form-group">
+          <label>المبلغ (ج.م) <span style="color:red">*</span></label>
+          <input type="number" id="exp-amount" placeholder="0" min="0" step="any" required>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <textarea id="exp-notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close('exp-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="Expenses.save()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ETA Submit Modal -->
+<div class="modal-overlay" id="eta-submit-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>📤 إرسال فاتورة لـ ETA</h2>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close('eta-submit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eta-submit-inv-id">
+      <div style="background:var(--gray-50);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:.9rem">
+          <span style="color:var(--gray-500)">رقم الفاتورة</span>
+          <strong id="eta-submit-inv-num"></strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-top:6px">
+          <span style="color:var(--gray-500)">الإجمالي</span>
+          <strong id="eta-submit-inv-total"></strong>
+        </div>
+      </div>
+
+      <div style="font-size:.85rem;color:var(--gray-500);margin-bottom:12px;line-height:1.7">
+        سيتم إرسال الفاتورة إلى هيئة الضرائب المصرية (ETA) بصيغة الفاتورة الإلكترونية.<br>
+        تأكد من تشغيل <code style="background:var(--gray-100);padding:1px 5px;border-radius:3px">eta-proxy.js</code> أولاً.
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        <button class="btn btn-outline btn-sm" onclick="etaExportCurrent()">⬇️ تحميل JSON فقط</button>
+        <a href="https://invoicing.preprod.eta.gov.eg" target="_blank" class="btn btn-ghost btn-sm">🌐 فتح بوابة ETA</a>
+      </div>
+
+      <div id="eta-submit-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close('eta-submit-modal')">إغلاق</button>
+      <button class="btn btn-primary" id="eta-submit-btn" onclick="ETA.doSubmit()">📤 إرسال لـ ETA</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-wrapper -->
+
+<!-- Scripts (order matters: api + auth before db) -->
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+<script src="js/customers.js"></script>
+<script src="js/invoices.js"></script>
+<script src="js/expenses.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/eta.js"></script>
+<script src="js/app.js"></script>
+<script>
+function etaExportCurrent() {
+  const id = document.getElementById('eta-submit-inv-id').value;
+  const inv = Invoices.getAll().find(i => String(i.id) === String(id));
+  if (inv) ETA.exportETAJson(inv);
+}
+</script>
+</body>
+</html>

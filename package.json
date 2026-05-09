@@ -1,0 +1,13 @@
+{
+  "name": "mohaseb-smb",
+  "version": "1.0.0",
+  "description": "برنامج محاسبة للشركات الصغيرة - مصر",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && pnpm dev",
+    "serve": "npx serve .",
+    "backend:install": "cd backend && pnpm install",
+    "backend:migrate": "cd backend && pnpm db:migrate",
+    "backend:studio": "cd backend && pnpm db:studio"
+  }
+}

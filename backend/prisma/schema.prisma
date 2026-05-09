@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  currency  String   @default("EGP")
+  timezone  String   @default("Africa/Cairo")
+  taxId     String?
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyUsers CompanyUser[]
+  customers    Customer[]
+  invoices     Invoice[]
+  expenses     Expense[]
+  settings     Setting[]
+}
+
+model CompanyUser {
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@index([userId])
+}
+
+enum Role {
+  ADMIN
+  ACCOUNTANT
+  STAFF
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  taxId     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([companyId])
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  companyId   String
+  customerId  String?
+  number      String
+  date        DateTime
+  dueDate     DateTime?
+  status      InvoiceStatus @default(PENDING)
+  subtotal    Decimal       @db.Decimal(15, 2) @default(0)
+  taxAmount   Decimal       @db.Decimal(15, 2) @default(0)
+  discount    Decimal       @db.Decimal(15, 2) @default(0)
+  total       Decimal       @db.Decimal(15, 2) @default(0)
+  notes       String?
+  etaUuid     String?
+  etaStatus   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  company  Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    InvoiceItem[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([customerId])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Decimal @db.Decimal(10, 3)
+  unitPrice   Decimal @db.Decimal(15, 2)
+  taxRate     Decimal @db.Decimal(5, 2) @default(0)
+  total       Decimal @db.Decimal(15, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  companyId   String
+  date        DateTime
+  category    String
+  description String?
+  amount      Decimal  @db.Decimal(15, 2)
+  vendor      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([date])
+}
+
+model Setting {
+  id        String @id @default(uuid())
+  companyId String
+  key       String
+  value     String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key])
+}
